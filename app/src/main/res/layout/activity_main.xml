@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 메인 창 WebView -->
+    <WebView
+        android:id="@+id/wvMain"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
+    <!-- 소설 읽기용 WebView -->
+    <WebView
+        android:id="@+id/wvReader"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
+    <!-- 검색용 WebView -->
+    <WebView
+        android:id="@+id/wvSearch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
+</FrameLayout>
