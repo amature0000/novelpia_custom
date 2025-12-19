@@ -12,12 +12,21 @@
         android:overScrollMode="never"
         android:scrollbars="none" />
 
+    <!-- 내서재 WebView -->
+    <WebView
+        android:id="@+id/wvBook"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
     <!-- 소설 읽기용 WebView -->
     <WebView
         android:id="@+id/wvReader"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:overScrollMode="never"
         android:scrollbars="none" />
 
@@ -26,7 +35,7 @@
         android:id="@+id/wvSearch"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:overScrollMode="never"
         android:scrollbars="none" />
 
