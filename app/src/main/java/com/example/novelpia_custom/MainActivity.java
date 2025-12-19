@@ -3,6 +3,9 @@ package com.example.novelpia_custom;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -26,20 +29,19 @@ public class MainActivity extends AppCompatActivity {
     private String searchUrl = null;
     private String viewerUrl = null;
 
-    // 실제 도메인으로 바꾸세요
     private static final String START_URL  = "https://novelpia.com/";
     private static final String SEARCH_URL = START_URL + "search";
     private static final String VIEWER_URL = START_URL + "viewer";
     public static void clearWebViewData(WebView wv) {
-        // 1) WebView 캐시/히스토리
+        // WebView 캐시
         wv.clearCache(true);
         wv.clearHistory();
         wv.clearFormData(); // 폼 자동완성/입력 데이터
 
-        // 2) DOM Storage(LocalStorage/SessionStorage 등)
+        // DOM Storage
         WebStorage.getInstance().deleteAllData();
 
-        // 3) 쿠키(세션/자동로그인 관련)
+        // 쿠키
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
 
@@ -135,6 +137,24 @@ public class MainActivity extends AppCompatActivity {
                 }
                 openViewer(url);
                 return false; // viewer 로딩만 통과
+            }
+        });
+        // 현재 링크 복사 기능
+        wvViewer.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View w) {
+                if (wvViewer.getVisibility() != View.VISIBLE) return false;
+
+                String url = wvViewer.getUrl();
+                if(url == null || url.isEmpty()) return false;
+
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                cm.setPrimaryClip(ClipData.newPlainText("viewer_url", url));
+
+                Toast myToast = Toast.makeText(MainActivity.this,"링크 복사됨", Toast.LENGTH_SHORT);
+                myToast.show();
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {myToast.cancel();}, 500);
+                return true;
             }
         });
 
