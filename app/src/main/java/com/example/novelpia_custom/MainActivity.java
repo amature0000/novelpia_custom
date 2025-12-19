@@ -31,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
     private WebView wvBook;
 
     private Deque<Character> backoffstack = new ArrayDeque<>();
-    private Deque<String> mainstack = new ArrayDeque<>();
     private static final char MAIN_INDEX = 0b0001;
     private static final char SEARCH_INDEX = 0b0010;
     private static final char VIEWER_INDEX = 0b0100;
@@ -189,39 +188,37 @@ public class MainActivity extends AppCompatActivity {
     private void openMain(String url) {
         wvMain.loadUrl(url);
         url = url.split("\\?")[0];
-        Log.d("swap", url);
 
         // 만약 이전 링크와 동일한 경우 삽입취소(메인코드의 경우 동일 링크여도 새로고침이 됨)
         boolean dobackoff = false;
-        if(mainString.equals(url)) dobackoff = true;
+        if(current == MAIN_INDEX && mainString.equals(url)) dobackoff = true;
         swapView(MAIN_INDEX, dobackoff);
         // 만약 초기화면으로 넘어온 경우 스택 초기화
         if(url.equals(START_URL)) backoffstack.clear();
+        Log.d("swap", "openMain"+(int)current+"**"+dobackoff+" remain:"+backoffstack.size());
         mainString = url;
     }
     private void openViewer(String url) {
         if (!viewerString.equals(url)) wvViewer.loadUrl(url);
         url = url.split("\\?")[0];
-        Log.d("swap", viewerString+"**"+url);
         swapView(VIEWER_INDEX, false);
         viewerString = url;
     }
     private void openSearch(String url) {
         if (!searchString.equals(url)) wvSearch.loadUrl(url);
         url = url.split("\\?")[0];
-        Log.d("swap", searchString+"**"+url);
         swapView(SEARCH_INDEX, false);
         searchString = url;
     }
     private void openBook(String url) {
         wvBook.loadUrl(url);
         url = url.split("\\?")[0];
-        Log.d("swap", bookString+"**"+url);
 
         // 만약 이전 링크와 동일한 경우 삽입취소(메인코드의 경우 동일 링크여도 새로고침이 됨)
         boolean dobackoff = false;
-        if(bookString.equals(url)) dobackoff = true;
+        if(current == BOOK_INDEX && bookString.equals(url)) dobackoff = true;
         swapView(BOOK_INDEX, dobackoff);
+        Log.d("swap", "openBook"+(int)current+"**"+dobackoff+" remain:"+backoffstack.size());
         bookString = url;
     }
     private void handleUrl(String url) {
@@ -238,12 +235,24 @@ public class MainActivity extends AppCompatActivity {
         }
 
         char backoff = backoffstack.pop();
+
+        Log.d("swap", (int)current+"->"+(int)backoff+" remain:"+backoffstack.size());
+
+        // Main 화면이 열려 있을 때 처리
+        if (current == MAIN_INDEX) {
+            // 우선 뒤로가기 실행
+            if (wvMain.canGoBack()) wvMain.goBack();
+            // 다른 웹뷰인 경우
+            if (backoff != MAIN_INDEX) swapView(backoff, true);
+            return;
+        }
         // Search 화면이 열려 있을 때 처리
         if (current == SEARCH_INDEX) {
             // 되돌아갈 화면이 Search일 때
             if (backoff == SEARCH_INDEX && wvSearch.canGoBack()) wvSearch.goBack();
             // 다른 웹뷰인 경우
             else swapView(backoff, true);
+            return;
         }
         // 내서재 화면이 열려 있을 때 처리
         if (current == BOOK_INDEX) {
@@ -251,18 +260,9 @@ public class MainActivity extends AppCompatActivity {
             if (backoff == BOOK_INDEX && wvBook.canGoBack()) wvBook.goBack();
             // 다른 웹뷰인 경우
             else swapView(backoff, true);
+            return;
         }
         // Viewer 화면이 열려 있을 때 처리 - 무조건 다른 웹뷰로 이동됨
         if (current == VIEWER_INDEX) swapView(backoff, true);
-        // Main 화면이 열려 있을 때 처리
-        if (current == MAIN_INDEX) {
-            // 되돌아갈 화면이 Main일 때
-            if (backoff == MAIN_INDEX && wvMain.canGoBack()) wvMain.goBack();
-                // 다른 웹뷰인 경우
-            else swapView(backoff, true);
-        }
-        else if(backoff == MAIN_INDEX) {
-            if(wvMain.canGoBack()) wvMain.goBack();
-        }
     }
 }
