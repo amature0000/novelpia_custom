@@ -214,10 +214,14 @@ public class MainActivity extends AppCompatActivity {
         searchString = url;
     }
     private void openBook(String url) {
-        if (!bookString.equals(url)) wvBook.loadUrl(url);
+        wvBook.loadUrl(url);
         url = url.split("\\?")[0];
         Log.d("swap", bookString+"**"+url);
-        swapView(BOOK_INDEX, false);
+
+        // 만약 이전 링크와 동일한 경우 삽입취소(메인코드의 경우 동일 링크여도 새로고침이 됨)
+        boolean dobackoff = false;
+        if(bookString.equals(url)) dobackoff = true;
+        swapView(BOOK_INDEX, dobackoff);
         bookString = url;
     }
     private void handleUrl(String url) {
