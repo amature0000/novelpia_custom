@@ -207,6 +207,8 @@ public class MainActivity extends AppCompatActivity {
         url = url.split("\\?")[0];
         swapView(VIEWER_INDEX, false);
         viewerString = url;
+        // novel에서 넘어온 경우 해당 웹뷰의 로딩 화면 제거
+        if(!novelString.equals("")) wvNovel.loadUrl(novelString);
     }
     private void openSearch(String url) {
         if (!searchString.equals(url)) wvSearch.loadUrl(url);
