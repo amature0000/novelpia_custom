@@ -52,6 +52,14 @@ public class MainActivity extends AppCompatActivity {
     private static final String BOOK_SUF = "mybook";
     private static final String NOVEL_SUF = "novel";
 
+    private static final String KEY_CURRENT = "key_current";
+    private static final String KEY_STACK = "key_stack";
+    private static final String KEY_MAIN_STATE = "key_wv_main";
+    private static final String KEY_SEARCH_STATE = "key_wv_search";
+    private static final String KEY_VIEWER_STATE = "key_wv_viewer";
+    private static final String KEY_BOOK_STATE = "key_wv_book";
+    private static final String KEY_NOVEL_STATE = "key_wv_novel";
+
     private final Handler toastHandler = new Handler(Looper.getMainLooper());
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -120,13 +128,18 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // 초기 로드
-        wvMain.loadUrl(START_URL);
-        wvBook.loadUrl(START_URL + BOOK_SUF);
-        wvSearch.loadUrl(START_URL + SEARCH_SUF);
-        // main 웹뷰 스택에 넣기
-        swapView(BOOK_INDEX, false);
-        // search 로딩만(스택에 넣지 않음)
-//        swapView(BOOK_INDEX, true);
+        boolean restored = false;
+        if(savedInstanceState != null) {
+            restored = restoreAll(savedInstanceState);
+            Log.d("res", "restore"+restored);
+        }
+        if(!restored) {
+            wvMain.loadUrl(START_URL);
+            wvBook.loadUrl(START_URL + BOOK_SUF);
+            wvSearch.loadUrl(START_URL + SEARCH_SUF);
+            swapView(BOOK_INDEX, false);
+            Log.d("res", "not restore");
+        }
     }
     private void setupWebView(WebView wv) {
         WebSettings s = wv.getSettings();
@@ -166,6 +179,73 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+    }
+    private boolean restoreAll(Bundle state) {
+        try {
+            // backoffstack 구성
+            byte[] arr = state.getByteArray(KEY_STACK);
+            backoffstack.clear();
+            if (arr != null) {
+                for (int i = arr.length - 1; i >= 0; i--) {
+                    backoffstack.push((char) (arr[i] & 0xFF));
+                }
+            }
+
+            Bundle bMain = state.getBundle(KEY_MAIN_STATE);
+            Bundle bSearch = state.getBundle(KEY_SEARCH_STATE);
+            Bundle bViewer = state.getBundle(KEY_VIEWER_STATE);
+            Bundle bBook = state.getBundle(KEY_BOOK_STATE);
+            Bundle bNovel = state.getBundle(KEY_NOVEL_STATE);
+
+            if (bMain != null) wvMain.restoreState(bMain);
+            if (bSearch != null) wvSearch.restoreState(bSearch);
+            if (bViewer != null) wvViewer.restoreState(bViewer);
+            if (bBook != null) wvBook.restoreState(bBook);
+            if (bNovel != null) wvNovel.restoreState(bNovel);
+
+            // 현재 화면 띄우기
+            current = state.getChar(KEY_CURRENT, MAIN_INDEX);
+            swapView(current, true);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        Log.d("res", "restored");
+        super.onSaveInstanceState(outState);
+
+        outState.putChar(KEY_CURRENT, current);
+
+        // backoffstack 저장
+        int size = backoffstack.size();
+        byte[] arr = new byte[size];
+        int i = 0;
+        for (Character c : backoffstack) {
+            arr[i++] = (byte) (c & 0xFF);
+        }
+        outState.putByteArray(KEY_STACK, arr);
+
+        // WebView 상태 저장
+        Bundle bMain = new Bundle();
+        Bundle bSearch = new Bundle();
+        Bundle bViewer = new Bundle();
+        Bundle bBook = new Bundle();
+        Bundle bNovel = new Bundle();
+
+        wvMain.saveState(bMain);
+        wvSearch.saveState(bSearch);
+        wvViewer.saveState(bViewer);
+        wvBook.saveState(bBook);
+        wvNovel.saveState(bNovel);
+
+        outState.putBundle(KEY_MAIN_STATE, bMain);
+        outState.putBundle(KEY_SEARCH_STATE, bSearch);
+        outState.putBundle(KEY_VIEWER_STATE, bViewer);
+        outState.putBundle(KEY_BOOK_STATE, bBook);
+        outState.putBundle(KEY_NOVEL_STATE, bNovel);
     }
     // 웹뷰 전환
     private void swapView(char index, boolean isbackoff) { //0b0000
@@ -298,5 +378,23 @@ public class MainActivity extends AppCompatActivity {
         }
         // Viewer 화면이 열려 있을 때 처리 - 무조건 다른 웹뷰로 이동됨
         if (current == VIEWER_INDEX) swapView(backoff, true);
+    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        wvMain.onPause();
+        wvSearch.onPause();
+        wvViewer.onPause();
+        wvBook.onPause();
+        wvNovel.onPause();
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        wvMain.onResume();
+        wvSearch.onResume();
+        wvViewer.onResume();
+        wvBook.onResume();
+        wvNovel.onResume();
     }
 }
