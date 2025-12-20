@@ -103,6 +103,21 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+        wvNovel.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View w) {
+                if (wvNovel.getVisibility() != View.VISIBLE) return false;
+
+                String url = wvNovel.getUrl();
+                if(url == null || url.isEmpty()) return false;
+
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                cm.setPrimaryClip(ClipData.newPlainText("url", url));
+
+                handleToast("링크 복사됨");
+                return true;
+            }
+        });
 
         // 초기 로드
         wvMain.loadUrl(START_URL);
