@@ -4,19 +4,20 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
-import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
@@ -29,23 +30,27 @@ public class MainActivity extends AppCompatActivity {
     private WebView wvSearch;
     private WebView wvMain;
     private WebView wvBook;
+    private WebView wvNovel;
 
     private Deque<Character> backoffstack = new ArrayDeque<>();
     private static final char MAIN_INDEX = 0b0001;
     private static final char SEARCH_INDEX = 0b0010;
-    private static final char VIEWER_INDEX = 0b0100;
-    private static final char BOOK_INDEX = 0b1000;
+    private static final char VIEWER_INDEX = 0b0011;
+    private static final char BOOK_INDEX = 0b0100;
+    private static final char NOVEL_INDEX = 0b0101;
     private char current = MAIN_INDEX;
 
     private String mainString = START_URL;
     private String searchString = START_URL + SEARCH_SUF;
     private String viewerString = "";
     private String bookString = START_URL + BOOK_SUF;
+    private String novelString = "";
 
     private static final String START_URL  = "https://novelpia.com/";
     private static final String SEARCH_SUF = "search";
     private static final String VIEWER_SUF = "viewer";
     private static final String BOOK_SUF = "mybook";
+    private static final String NOVEL_SUF = "novel";
 
     private final Handler toastHandler = new Handler(Looper.getMainLooper());
     @Override
@@ -61,11 +66,13 @@ public class MainActivity extends AppCompatActivity {
         wvViewer = findViewById(R.id.wvReader);
         wvSearch = findViewById(R.id.wvSearch);
         wvBook = findViewById(R.id.wvBook);
+        wvNovel = findViewById(R.id.wvNovel);
 
         setupWebView(wvMain);
         setupWebView(wvViewer);
         setupWebView(wvSearch);
         setupWebView(wvBook);
+        setupWebView(wvNovel);
 
         // 팝업 허용
         WebSettings s = wvMain.getSettings();
@@ -80,40 +87,6 @@ public class MainActivity extends AppCompatActivity {
                 handleBackPressed();
             }
         });
-
-        // 메인 창
-        wvMain.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                handleUrl(request.getUrl().toString());
-                return true;
-            }
-        });
-
-        // 검색 창
-        wvSearch.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                handleUrl(request.getUrl().toString());
-                return true;
-            }
-        });
-        // 읽기 창
-        wvViewer.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                handleUrl(request.getUrl().toString());
-                return true;
-            }
-        });
-        // 내서재 창
-        wvBook.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                handleUrl(request.getUrl().toString());
-                return true;
-            }
-        });
         // 현재 링크 복사 기능
         wvViewer.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
@@ -126,9 +99,7 @@ public class MainActivity extends AppCompatActivity {
                 ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                 cm.setPrimaryClip(ClipData.newPlainText("url", url));
 
-                Toast myToast = Toast.makeText(MainActivity.this,"링크 복사됨", Toast.LENGTH_SHORT);
-                myToast.show();
-                toastHandler.postDelayed(myToast::cancel, 500);
+                handleToast("링크 복사됨");
                 return true;
             }
         });
@@ -138,9 +109,48 @@ public class MainActivity extends AppCompatActivity {
         wvBook.loadUrl(START_URL + BOOK_SUF);
         wvSearch.loadUrl(START_URL + SEARCH_SUF);
         // main 웹뷰 스택에 넣기
-        swapView(SEARCH_INDEX, false);
+        swapView(BOOK_INDEX, false);
         // search 로딩만(스택에 넣지 않음)
-        swapView(BOOK_INDEX, true);
+//        swapView(BOOK_INDEX, true);
+    }
+    private void setupWebView(WebView wv) {
+        WebSettings s = wv.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // 링크 이동 블락
+        wv.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                handleUrl(request.getUrl().toString());
+                return true;
+            }
+        });
+        // 얼럿창 처리
+        wv.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("알림")
+                        .setMessage(message)
+                        .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("확인")
+                        .setMessage(message)
+                        .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                        .setNegativeButton("Cancel", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+        });
     }
     // 웹뷰 전환
     private void swapView(char index, boolean isbackoff) { //0b0000
@@ -148,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
         wvSearch.setVisibility(View.GONE);
         wvViewer.setVisibility(View.GONE);
         wvBook.setVisibility(View.GONE);
+        wvNovel.setVisibility(View.GONE);
 
         String temp = "";
         char topush = current;
@@ -168,22 +179,16 @@ public class MainActivity extends AppCompatActivity {
             wvBook.setVisibility(View.VISIBLE);
             temp = "mybook";
         }
+        else if(index == NOVEL_INDEX) {
+            wvNovel.setVisibility(View.VISIBLE);
+            temp = "novel";
+        }
         // 만약 초기화면으로 넘어온 경우 스택 초기화(openMain에 구현됨)
         // viewer 웹뷰가 아니거나(계층구조 설정) 되돌리기 작업이 아닌 경우 스택에 삽입
         if((current != VIEWER_INDEX) && (!isbackoff)) backoffstack.push(topush);
 
         current = index;
-        Toast myToast = Toast.makeText(this.getApplicationContext(),temp, Toast.LENGTH_SHORT);
-        myToast.show();
-        toastHandler.postDelayed(myToast::cancel, 500);
-    }
-
-    private void setupWebView(WebView wv) {
-        WebSettings s = wv.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setDatabaseEnabled(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        handleToast(temp);
     }
     private void openMain(String url) {
         wvMain.loadUrl(url);
@@ -195,7 +200,6 @@ public class MainActivity extends AppCompatActivity {
         swapView(MAIN_INDEX, dobackoff);
         // 만약 초기화면으로 넘어온 경우 스택 초기화
         if(url.equals(START_URL)) backoffstack.clear();
-        Log.d("swap", "openMain"+(int)current+"**"+dobackoff+" remain:"+backoffstack.size());
         mainString = url;
     }
     private void openViewer(String url) {
@@ -218,13 +222,24 @@ public class MainActivity extends AppCompatActivity {
         boolean dobackoff = false;
         if(current == BOOK_INDEX && bookString.equals(url)) dobackoff = true;
         swapView(BOOK_INDEX, dobackoff);
-        Log.d("swap", "openBook"+(int)current+"**"+dobackoff+" remain:"+backoffstack.size());
         bookString = url;
+    }
+    private void openNovel(String url) {
+        if(!novelString.equals(url)) wvNovel.loadUrl(url);
+        url = url.split("\\?")[0];
+        swapView(NOVEL_INDEX, false);
+        novelString = url;
+    }
+    private void handleToast(String msg) {
+        Toast myToast = Toast.makeText(this.getApplicationContext(),msg, Toast.LENGTH_SHORT);
+        myToast.show();
+        toastHandler.postDelayed(myToast::cancel, 500);
     }
     private void handleUrl(String url) {
         if (url.contains(SEARCH_SUF)) openSearch(url);
         else if (url.contains(VIEWER_SUF)) openViewer(url);
         else if (url.contains(BOOK_SUF)) openBook(url);
+        else if (url.contains(NOVEL_SUF)) openNovel(url);
         else openMain(url);
     }
     public void handleBackPressed() {
@@ -236,8 +251,6 @@ public class MainActivity extends AppCompatActivity {
 
         char backoff = backoffstack.pop();
 
-        Log.d("swap", (int)current+"->"+(int)backoff+" remain:"+backoffstack.size());
-
         // Main 화면이 열려 있을 때 처리
         if (current == MAIN_INDEX) {
             // 우선 뒤로가기 실행
@@ -248,7 +261,6 @@ public class MainActivity extends AppCompatActivity {
         }
         // Search 화면이 열려 있을 때 처리
         if (current == SEARCH_INDEX) {
-            // 되돌아갈 화면이 Search일 때
             if (backoff == SEARCH_INDEX && wvSearch.canGoBack()) wvSearch.goBack();
             // 다른 웹뷰인 경우
             else swapView(backoff, true);
@@ -256,8 +268,13 @@ public class MainActivity extends AppCompatActivity {
         }
         // 내서재 화면이 열려 있을 때 처리
         if (current == BOOK_INDEX) {
-            // 되돌아갈 화면이 내서재일 때
             if (backoff == BOOK_INDEX && wvBook.canGoBack()) wvBook.goBack();
+            // 다른 웹뷰인 경우
+            else swapView(backoff, true);
+            return;
+        }
+        if (current == NOVEL_INDEX) {
+            if (backoff == NOVEL_INDEX && wvNovel.canGoBack()) wvNovel.goBack();
             // 다른 웹뷰인 경우
             else swapView(backoff, true);
             return;

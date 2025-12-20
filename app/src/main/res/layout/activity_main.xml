@@ -39,4 +39,13 @@
         android:overScrollMode="never"
         android:scrollbars="none" />
 
+    <!-- 소설표지용 WebView -->
+    <WebView
+        android:id="@+id/wvNovel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:overScrollMode="never"
+        android:scrollbars="none" />
+
 </FrameLayout>
