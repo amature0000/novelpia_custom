@@ -1,5 +1,5 @@
 # Novelpia-custom
-공식앱 로딩이 너무 느려서 만든 커스텀 앱
+노벨피아 비공식 앱
 ## speeedup
 - 노벨피아 공식 앱의 느린 로딩속도를 일부 개선
 ## functions
