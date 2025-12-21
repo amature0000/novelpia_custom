@@ -1,6 +1,7 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/amature0000/novelpia_custom/total.svg?logo=github)](https://github.com/amature0000/novelpia_custom/releases)
 # Novelpia-custom
 노벨피아 비공식 앱
+
 [사용 설명서](https://reinvented-oak-967.notion.site/Novelpia-custom-app-2d04a4ebe77b800a8386c70d864b9644?pvs=74)
 ## speeedup
 - 노벨피아 공식 앱의 느린 로딩속도를 일부 개선
