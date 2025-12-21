@@ -1,3 +1,4 @@
+[![GitHub downloads](https://img.shields.io/github/downloads/amature0000/novelpia_custom/total.svg?logo=github)](https://github.com/amature0000/novelpia_custom/releases)
 # Novelpia-custom
 노벨피아 비공식 앱
 ## speeedup
