@@ -15,6 +15,7 @@ import android.os.Looper;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
+import android.view.KeyEvent;
 import android.webkit.CookieManager;
 import android.webkit.JsResult;
 import android.webkit.WebChromeClient;
@@ -394,6 +395,47 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             return false;
         }
+    }
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            int code = event.getKeyCode();
+
+            if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                if (current != VIEWER_INDEX) {
+                    return super.dispatchKeyEvent(event);
+                }
+                WebView wv = classify(current);
+
+                int[] keys;
+                if (code == KeyEvent.KEYCODE_VOLUME_UP) {
+                    // 위 + 왼쪽
+                    sendArrowKeyViaJs(wv, "ArrowUp");
+                    sendArrowKeyViaJs(wv, "ArrowUp");
+                    sendArrowKeyViaJs(wv, "ArrowLeft");
+                } else {
+                    // 아래 + 오른쪽
+                    sendArrowKeyViaJs(wv, "ArrowDown");
+                    sendArrowKeyViaJs(wv, "ArrowDown");
+                    sendArrowKeyViaJs(wv, "ArrowRight");
+                }
+
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+    private void sendArrowKeyViaJs(WebView wv, String key) {
+        // "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"
+        String js =
+                "(function(){"
+                        + "  var opt = {key:'" + key + "', code:'" + key + "', bubbles:true, cancelable:true};"
+                        + "  document.dispatchEvent(new KeyboardEvent('keydown', opt));"
+                        + "  document.dispatchEvent(new KeyboardEvent('keyup', opt));"
+                        + "  window.dispatchEvent(new KeyboardEvent('keydown', opt));"
+                        + "  window.dispatchEvent(new KeyboardEvent('keyup', opt));"
+                        + "})();";
+        wv.evaluateJavascript(js, null);
     }
     @Override
     protected void onPause() {
