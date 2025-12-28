@@ -92,10 +92,6 @@ public class MainActivity extends AppCompatActivity {
         s.setJavaScriptCanOpenWindowsAutomatically(true);
         s.setSupportMultipleWindows(true);
 
-//        wvMain.setWebChromeClient(new android.webkit.WebChromeClient());
-
-        btnGo.setOnClickListener(v -> showGoDialog());
-
         // 뒤로가기 콜백 등록
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -104,38 +100,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         // 현재 링크 복사 기능
-        wvViewer.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View w) {
-                if (wvViewer.getVisibility() != View.VISIBLE) return false;
+        WebView[] webViews = {wvViewer, wvNovel};
+        for(WebView wv : webViews) {
+            wv.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View w) {
+                    if (wv.getVisibility() != View.VISIBLE) return false;
 
-                String url = wvViewer.getUrl();
-                if(url == null || url.isEmpty()) return false;
+                    String url = wv.getUrl();
+                    if(url == null || url.isEmpty()) return false;
 
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                cm.setPrimaryClip(ClipData.newPlainText("url", url));
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(ClipData.newPlainText("url", cutUrl(url)));
 
-                handleToast("링크 복사됨");
-                return true;
-            }
-        });
-        wvNovel.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View w) {
-                if (wvNovel.getVisibility() != View.VISIBLE) return false;
-
-                String url = wvNovel.getUrl();
-                if(url == null || url.isEmpty()) return false;
-
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                cm.setPrimaryClip(ClipData.newPlainText("url", url));
-
-                handleToast("링크 복사됨");
-                return true;
-            }
-        });
+                    handleToast("링크 복사됨");
+                    return true;
+                }
+            });
+        }
 
         // 초기 로드
+        btnGo.setOnClickListener(v -> showGoDialog());
         boolean restored = false;
         if(savedInstanceState != null) {
             restored = restoreAll(savedInstanceState);
@@ -283,8 +268,6 @@ public class MainActivity extends AppCompatActivity {
         url = cutUrl(url);
         swapView(VIEWER_INDEX, false);
         viewerString = url;
-        // novel에서 넘어온 경우 해당 웹뷰의 로딩 화면 제거
-        if(!novelString.equals("")) wvNovel.loadUrl(novelString);
         Log.d("stack", "openViewer " + url);
     }
     private void openSearch(String url) {
@@ -321,6 +304,9 @@ public class MainActivity extends AppCompatActivity {
         toastHandler.postDelayed(myToast::cancel, 500);
     }
     private void handleUrl(String url) {
+        // novel에서 넘어가는 경우 해당 웹뷰의 로딩 화면 제거
+        if(current == NOVEL_INDEX) wvNovel.loadUrl(novelString);
+
         if (url.contains(SEARCH_SUF)) openSearch(url);
         else if (url.contains(VIEWER_SUF)) openViewer(url);
         else if (url.contains(BOOK_SUF)) openBook(url);
