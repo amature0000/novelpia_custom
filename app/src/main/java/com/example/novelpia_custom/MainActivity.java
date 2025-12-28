@@ -204,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
 
         EditText et = new EditText(this);
         et.setHint("링크를 입력하세요");
-        if(clipUrl != null) et.setHint(clip);
+        if(clipUrl != null) et.setHint(clipUrl);
         et.setSingleLine(true);
         et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
 
@@ -312,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
         String[] tokens = raw.split("\\s+");
 
         for (String token : tokens) if (token.contains("novelpia.com"))
-            return token;
+            return cutUrl(token);
         return null;
     }
     private void handleToast(String msg) {
