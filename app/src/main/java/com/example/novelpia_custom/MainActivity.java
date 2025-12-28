@@ -246,6 +246,9 @@ public class MainActivity extends AppCompatActivity {
         wvBook.setVisibility(View.GONE);
         wvNovel.setVisibility(View.GONE);
 
+        if(index != VIEWER_INDEX) btnGo.setVisibility(View.VISIBLE);
+        else btnGo.setVisibility(View.GONE);
+
         String temp = toRead(index);
         classify(index).setVisibility(View.VISIBLE);
         // viewer 웹뷰가 아니거나 되돌리기 작업이 아닌 경우 스택에 삽입
