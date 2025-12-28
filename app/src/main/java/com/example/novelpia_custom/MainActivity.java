@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView wvMain;
     private WebView wvBook;
     private WebView wvNovel;
+    private String wvUserAgent = null;
     private ImageButton btnGo;
 
     private Deque<Byte> backoffstack = new ArrayDeque<>();
@@ -138,6 +139,11 @@ public class MainActivity extends AppCompatActivity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // 구글 로그인 문제 수정
+        if (wvUserAgent == null) {
+            wvUserAgent = s.getUserAgentString().replace("; wv", "");
+        }
+        s.setUserAgentString(wvUserAgent);
         // 링크 이동 블락
         wv.setWebViewClient(new WebViewClient() {
             @Override
