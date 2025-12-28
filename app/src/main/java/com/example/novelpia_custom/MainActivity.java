@@ -199,8 +199,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
     private void showGoDialog() {
+        String clip = getLatestClipboard();
+        final String clipUrl = clip != null ? getNovelpiaUrl(clip) : null;
+
         EditText et = new EditText(this);
         et.setHint("링크를 입력하세요");
+        if(clipUrl != null) et.setHint(clip);
         et.setSingleLine(true);
         et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
 
@@ -210,10 +214,9 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("이동", (d, w) -> {
                     String raw = et.getText().toString();
                     String url = getNovelpiaUrl(raw);
-                    if (url == null) return;
-                    handleUrl(url);
+                    if(url != null) handleUrl(url);
+                    else if (clipUrl != null) handleUrl(clipUrl);
                 })
-                .setNegativeButton("취소", null)
                 .show();
     }
     @Override
@@ -395,6 +398,21 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             return false;
         }
+    }
+    private String getLatestClipboard() {
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+
+        if(cm == null) return null;
+        if(!cm.hasPrimaryClip()) return null;
+
+        ClipData clip = cm.getPrimaryClip();
+        if(clip == null || clip.getItemCount() == 0) return null;
+
+        ClipData.Item item = clip.getItemAt(0);
+        CharSequence text = item.getText();
+        if(text == null) return null;
+
+        return text.toString();
     }
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
