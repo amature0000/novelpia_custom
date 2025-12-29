@@ -1,14 +1,15 @@
 package com.example.novelpia_custom;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private String wvUserAgent = null;
     private ImageButton btnGo;
 
-    private Deque<Byte> backoffstack = new ArrayDeque<>();
+    private final Deque<Byte> backoffstack = new ArrayDeque<>();
     private static final byte MAIN_INDEX = 0b0001;
     private static final byte SEARCH_INDEX = 0b0010;
     private static final byte VIEWER_INDEX = 0b0011;
@@ -133,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
             swapView(BOOK_INDEX, false);
         }
     }
+    @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView(WebView wv) {
         WebSettings s = wv.getSettings();
         s.setJavaScriptEnabled(true);
@@ -211,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
 
         outState.putByte(KEY_CURRENT, current);
@@ -335,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
         if(index == BOOK_INDEX) return wvBook;
         if(index == NOVEL_INDEX) return wvNovel;
         if(index == MAIN_INDEX) return wvMain;
-        return null;
+        throw new AssertionError();
     }
     private String toRead(byte index) {
         if(index == SEARCH_INDEX) return "search";
@@ -343,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
         if(index == BOOK_INDEX) return "book";
         if(index == NOVEL_INDEX) return "novel";
         if(index == MAIN_INDEX) return "main";
-        return null;
+        throw new AssertionError();
     }
     public void handleBackPressed() {
         // 종료
@@ -420,7 +422,6 @@ public class MainActivity extends AppCompatActivity {
                 }
                 WebView wv = classify(current);
 
-                int[] keys;
                 if (code == KeyEvent.KEYCODE_VOLUME_UP) {
                     // 위 + 왼쪽
                     sendArrowKeyViaJs(wv, "ArrowUp");
