@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView wvNovel;
     private String wvUserAgent = null;
     private ImageButton btnGo;
-    // 페이지 이동 기록 저장용
+    // 페이지 이동용
     private final Deque<Byte> backoffstack = new ArrayDeque<>();
     private static final byte MAIN_INDEX = 0b0001;
     private static final byte SEARCH_INDEX = 0b0010;
@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 초기 로드
-        btnGo.setOnClickListener(v -> showGoDialog());
+        btnGo.setOnClickListener(v -> handleGoDialog());
         boolean restored = false;
         if(savedInstanceState != null) {
             restored = restoreAll(savedInstanceState);
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             wvMain.loadUrl(START_URL);
             wvBook.loadUrl(START_URL + BOOK_SUF);
             wvSearch.loadUrl(START_URL + SEARCH_SUF);
-            swapView(BOOK_INDEX, false); // TODO: 앱 시작 시 자동으로 내서재 열람하는 코드
+            swapView(BOOK_INDEX, false); // NOTE: 앱 시작 시 자동으로 내서재 열람하는 코드.
         }
     }
     // 웹뷰 초기화
@@ -150,19 +150,23 @@ public class MainActivity extends AppCompatActivity {
         wv.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
+                // NOTE: 노벨피아는 로그인 요구를 파라미터로 넘기는데, 아래와 같은 로직을 사용하면
+                //       로그인 요구 창이 열래는 대신 단순히 메인 창으로 돌아감
+                // NOTE: 파라미터 분리 로직을 '?sid='로 지정하면 해결되지만, 로그인 요청을 날리게 되면
+                //       backoffstack이 꼬이기 때문에 아래와 같이 모든 파라미터를 제거하도록 구현함
+                String url = cutUrl(request.getUrl().toString());
                 byte target = classify(url);
                 Log.d("stack", backoffstack.size() + "**" + toRead(current) + "->" + toRead(target));
                 if (target == current) {
-                    String current_url = view.getUrl();
                     // 동일 웹뷰 내에서 이동한 경우
-                    if (target != VIEWER_INDEX && current_url != null && !cutUrl(url).equals(cutUrl(current_url))) {
+                    String current_url = cutUrl(view.getUrl());
+                    if (target != VIEWER_INDEX && current_url != null && !url.equals(current_url)) {
                         backoffstack.push(current);
                     }
                     return false;
                 }
 
-                handleUrl(request.getUrl().toString());
+                handleUrl(url);
                 return true;
             }
         });
@@ -191,30 +195,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    // 링크 바로가기 제어
-    private void showGoDialog() {
-        String clip = getLatestClipboard();
-        final String clipUrl = clip != null ? getNovelpiaUrl(clip) : null;
-
-        EditText et = new EditText(this);
-        et.setHint("링크를 입력하세요");
-        if(clipUrl != null) et.setHint(clipUrl);
-        et.setSingleLine(true);
-        et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-
-        new AlertDialog.Builder(this)
-                .setTitle("주소로 이동")
-                .setView(et)
-                .setPositiveButton("이동", (d, w) -> {
-                    String raw = et.getText().toString();
-                    String url = getNovelpiaUrl(raw);
-                    if(url != null) handleUrl(url);
-                    else if (clipUrl != null) handleUrl(clipUrl);
-                })
-                .show();
-    }
     // 라우팅 로직 ==================================================================================
     private void swapView(byte index, boolean isbackoff) { //0b0000
+        Log.d("stack", "open: "+toRead(index));
         wvMain.setVisibility(View.GONE);
         wvSearch.setVisibility(View.GONE);
         wvViewer.setVisibility(View.GONE);
@@ -231,46 +214,38 @@ public class MainActivity extends AppCompatActivity {
         current = index;
         handleToast(temp);
     }
+    private void openBook(String url) {
+        wvBook.loadUrl(url);
+        swapView(BOOK_INDEX, false);
+    }
     private void openMain(String url) {
         wvMain.loadUrl(url);
 
-        url = cutUrl(url);
         swapView(MAIN_INDEX, false);
         // 만약 초기화면으로 넘어온 경우 스택 초기화
         if(url.equals(START_URL)) backoffstack.clear();
-        Log.d("stack", "openMain " + url);
     }
     private void openViewer(String url) {
         if (!viewerString.equals(url)) wvViewer.loadUrl(url);
 
-        url = cutUrl(url);
         swapView(VIEWER_INDEX, false);
         viewerString = url;
-        Log.d("stack", "openViewer " + url);
     }
     private void openSearch(String url) {
         if (!searchString.equals(url)) wvSearch.loadUrl(url);
 
-        url = cutUrl(url);
         swapView(SEARCH_INDEX, false);
         searchString = url;
-        Log.d("stack", "openSearch " + url);
-    }
-    private void openBook(String url) {
-        wvBook.loadUrl(url);
-        swapView(BOOK_INDEX, false);
-        Log.d("stack", "openBook " + url);
     }
     private void openNovel(String url) {
         if(!novelString.equals(url)) wvNovel.loadUrl(url);
 
-        url = cutUrl(url);
         swapView(NOVEL_INDEX, false);
         novelString = url;
-        Log.d("stack", "openNovel " + url);
     }
     // 핸들러 ======================================================================================
     private void handleUrl(String url) {
+        Log.d("stack", "req: " + url);
         // novel에서 넘어가는 경우 해당 웹뷰의 로딩 화면 제거
         if(current == NOVEL_INDEX) wvNovel.loadUrl(novelString);
 
@@ -296,6 +271,27 @@ public class MainActivity extends AppCompatActivity {
         if (current != backoff) {
             swapView(backoff, true);
         }
+    }
+    private void handleGoDialog() {
+        String clip = getLatestClipboard();
+        final String clipUrl = clip != null ? getNovelpiaUrl(clip) : null;
+
+        EditText et = new EditText(this);
+        et.setHint("링크를 입력하세요");
+        if(clipUrl != null) et.setHint(clipUrl);
+        et.setSingleLine(true);
+        et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+
+        new AlertDialog.Builder(this)
+                .setTitle("주소로 이동")
+                .setView(et)
+                .setPositiveButton("이동", (d, w) -> {
+                    String raw = et.getText().toString();
+                    String url = getNovelpiaUrl(raw);
+                    if(url != null) handleUrl(url);
+                    else if (clipUrl != null) handleUrl(clipUrl);
+                })
+                .show();
     }
     // utils ======================================================================================
     private String getNovelpiaUrl(String raw) {
