@@ -32,6 +32,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class MainActivity extends AppCompatActivity {
+    // 웹뷰
     private WebView wvViewer;
     private WebView wvSearch;
     private WebView wvMain;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView wvNovel;
     private String wvUserAgent = null;
     private ImageButton btnGo;
-
+    // 페이지 이동 기록 저장용
     private final Deque<Byte> backoffstack = new ArrayDeque<>();
     private static final byte MAIN_INDEX = 0b0001;
     private static final byte SEARCH_INDEX = 0b0010;
@@ -47,17 +48,17 @@ public class MainActivity extends AppCompatActivity {
     private static final byte BOOK_INDEX = 0b0100;
     private static final byte NOVEL_INDEX = 0b0101;
     private byte current = MAIN_INDEX;
-
+    // 현재 참조중인 페이지 링크 저장용
     private String searchString = START_URL + SEARCH_SUF;
     private String viewerString = "";
     private String novelString = "";
-
+    // url 식별용
     private static final String START_URL  = "https://novelpia.com/";
     private static final String SEARCH_SUF = "search";
     private static final String VIEWER_SUF = "viewer";
     private static final String BOOK_SUF = "mybook";
     private static final String NOVEL_SUF = "novel/"; // novelpia 중복
-
+    // restore keys
     private static final String KEY_CURRENT = "key_current";
     private static final String KEY_STACK = "key_stack";
     private static final String KEY_MAIN_STATE = "key_wv_main";
@@ -65,8 +66,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_VIEWER_STATE = "key_wv_viewer";
     private static final String KEY_BOOK_STATE = "key_wv_book";
     private static final String KEY_NOVEL_STATE = "key_wv_novel";
-
+    // Toast 핸들러
     private final Handler toastHandler = new Handler(Looper.getMainLooper());
+    // 메인코드 =====================================================================================
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,20 +106,17 @@ public class MainActivity extends AppCompatActivity {
         // 현재 링크 복사 기능
         WebView[] webViews = {wvViewer, wvNovel};
         for(WebView wv : webViews) {
-            wv.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View w) {
-                    if (wv.getVisibility() != View.VISIBLE) return false;
+            wv.setOnLongClickListener(w -> {
+                if (wv.getVisibility() != View.VISIBLE) return false;
 
-                    String url = wv.getUrl();
-                    if(url == null || url.isEmpty()) return false;
+                String url = wv.getUrl();
+                if(url == null || url.isEmpty()) return false;
 
-                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    cm.setPrimaryClip(ClipData.newPlainText("url", cutUrl(url)));
+                ClipboardManager cm1 = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                cm1.setPrimaryClip(ClipData.newPlainText("url", cutUrl(url)));
 
-                    handleToast("링크 복사됨");
-                    return true;
-                }
+                handleToast("링크 복사됨");
+                return true;
             });
         }
 
@@ -131,9 +130,10 @@ public class MainActivity extends AppCompatActivity {
             wvMain.loadUrl(START_URL);
             wvBook.loadUrl(START_URL + BOOK_SUF);
             wvSearch.loadUrl(START_URL + SEARCH_SUF);
-            swapView(BOOK_INDEX, false);
+            swapView(BOOK_INDEX, false); // TODO: 앱 시작 시 자동으로 내서재 열람하는 코드
         }
     }
+    // 웹뷰 초기화
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView(WebView wv) {
         WebSettings s = wv.getSettings();
@@ -191,6 +191,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    // 링크 바로가기 제어
     private void showGoDialog() {
         String clip = getLatestClipboard();
         final String clipUrl = clip != null ? getNovelpiaUrl(clip) : null;
@@ -212,48 +213,14 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .show();
     }
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-
-        outState.putByte(KEY_CURRENT, current);
-
-        // backoffstack 저장
-        int size = backoffstack.size();
-        byte[] arr = new byte[size];
-        int i = 0;
-        for (Byte b : backoffstack) {
-            arr[i++] = (byte) (b & 0xFF);
-        }
-        outState.putByteArray(KEY_STACK, arr);
-
-        // WebView 상태 저장
-        Bundle bMain = new Bundle();
-        Bundle bSearch = new Bundle();
-        Bundle bViewer = new Bundle();
-        Bundle bBook = new Bundle();
-        Bundle bNovel = new Bundle();
-
-        wvMain.saveState(bMain);
-        wvSearch.saveState(bSearch);
-        wvViewer.saveState(bViewer);
-        wvBook.saveState(bBook);
-        wvNovel.saveState(bNovel);
-
-        outState.putBundle(KEY_MAIN_STATE, bMain);
-        outState.putBundle(KEY_SEARCH_STATE, bSearch);
-        outState.putBundle(KEY_VIEWER_STATE, bViewer);
-        outState.putBundle(KEY_BOOK_STATE, bBook);
-        outState.putBundle(KEY_NOVEL_STATE, bNovel);
-    }
-    // 웹뷰 전환
+    // 라우팅 로직 ==================================================================================
     private void swapView(byte index, boolean isbackoff) { //0b0000
         wvMain.setVisibility(View.GONE);
         wvSearch.setVisibility(View.GONE);
         wvViewer.setVisibility(View.GONE);
         wvBook.setVisibility(View.GONE);
         wvNovel.setVisibility(View.GONE);
-
+        // viewer 웹뷰에서 바로가기 버튼 숨기기
         if(index != VIEWER_INDEX) btnGo.setVisibility(View.VISIBLE);
         else btnGo.setVisibility(View.GONE);
 
@@ -302,18 +269,7 @@ public class MainActivity extends AppCompatActivity {
         novelString = url;
         Log.d("stack", "openNovel " + url);
     }
-    private String getNovelpiaUrl(String raw) {
-        String[] tokens = raw.split("\\s+");
-
-        for (String token : tokens) if (token.contains("novelpia.com"))
-            return cutUrl(token);
-        return null;
-    }
-    private void handleToast(String msg) {
-        Toast myToast = Toast.makeText(this.getApplicationContext(),msg, Toast.LENGTH_SHORT);
-        myToast.show();
-        toastHandler.postDelayed(myToast::cancel, 500);
-    }
+    // 핸들러 ======================================================================================
     private void handleUrl(String url) {
         // novel에서 넘어가는 경우 해당 웹뷰의 로딩 화면 제거
         if(current == NOVEL_INDEX) wvNovel.loadUrl(novelString);
@@ -323,29 +279,6 @@ public class MainActivity extends AppCompatActivity {
         else if (url.contains(BOOK_SUF)) openBook(url);
         else if (url.contains(NOVEL_SUF)) openNovel(url);
         else openMain(url);
-    }
-    private byte classify(String url) {
-        if (url.contains(SEARCH_SUF)) return SEARCH_INDEX;
-        if (url.contains(VIEWER_SUF)) return VIEWER_INDEX;
-        if (url.contains(BOOK_SUF)) return BOOK_INDEX;
-        if (url.contains(NOVEL_SUF)) return NOVEL_INDEX;
-        return MAIN_INDEX;
-    }
-    private WebView classify(byte index) {
-        if(index == SEARCH_INDEX) return wvSearch;
-        if(index == VIEWER_INDEX) return wvViewer;
-        if(index == BOOK_INDEX) return wvBook;
-        if(index == NOVEL_INDEX) return wvNovel;
-        if(index == MAIN_INDEX) return wvMain;
-        throw new AssertionError();
-    }
-    private String toRead(byte index) {
-        if(index == SEARCH_INDEX) return "search";
-        if(index == VIEWER_INDEX) return "viewer";
-        if(index == BOOK_INDEX) return "book";
-        if(index == NOVEL_INDEX) return "novel";
-        if(index == MAIN_INDEX) return "main";
-        throw new AssertionError();
     }
     public void handleBackPressed() {
         // 종료
@@ -364,37 +297,44 @@ public class MainActivity extends AppCompatActivity {
             swapView(backoff, true);
         }
     }
-    private boolean restoreAll(Bundle state) {
-        try {
-            // backoffstack 구성
-            byte[] arr = state.getByteArray(KEY_STACK);
-            backoffstack.clear();
-            if (arr != null) {
-                for (int i = arr.length - 1; i >= 0; i--) {
-                    backoffstack.push((byte) (arr[i] & 0xFF));
-                }
-            }
+    // utils ======================================================================================
+    private String getNovelpiaUrl(String raw) {
+        String[] tokens = raw.split("\\s+");
 
-            Bundle bMain = state.getBundle(KEY_MAIN_STATE);
-            Bundle bSearch = state.getBundle(KEY_SEARCH_STATE);
-            Bundle bViewer = state.getBundle(KEY_VIEWER_STATE);
-            Bundle bBook = state.getBundle(KEY_BOOK_STATE);
-            Bundle bNovel = state.getBundle(KEY_NOVEL_STATE);
-
-            if (bMain != null) wvMain.restoreState(bMain);
-            if (bSearch != null) wvSearch.restoreState(bSearch);
-            if (bViewer != null) wvViewer.restoreState(bViewer);
-            if (bBook != null) wvBook.restoreState(bBook);
-            if (bNovel != null) wvNovel.restoreState(bNovel);
-
-            // 현재 화면 띄우기
-            current = state.getByte(KEY_CURRENT, MAIN_INDEX);
-            swapView(current, true);
-
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        for (String token : tokens) if (token.contains("novelpia.com"))
+            return cutUrl(token);
+        return null;
+    }
+    private String cutUrl(String url) {
+        return url.split("\\?")[0];
+    }
+    private void handleToast(String msg) {
+        Toast myToast = Toast.makeText(this.getApplicationContext(),msg, Toast.LENGTH_SHORT);
+        myToast.show();
+        toastHandler.postDelayed(myToast::cancel, 500);
+    }
+    private String toRead(byte index) {
+        if(index == SEARCH_INDEX) return "search";
+        if(index == VIEWER_INDEX) return "viewer";
+        if(index == BOOK_INDEX) return "book";
+        if(index == NOVEL_INDEX) return "novel";
+        if(index == MAIN_INDEX) return "main";
+        throw new AssertionError();
+    }
+    private byte classify(String url) {
+        if (url.contains(SEARCH_SUF)) return SEARCH_INDEX;
+        if (url.contains(VIEWER_SUF)) return VIEWER_INDEX;
+        if (url.contains(BOOK_SUF)) return BOOK_INDEX;
+        if (url.contains(NOVEL_SUF)) return NOVEL_INDEX;
+        return MAIN_INDEX;
+    }
+    private WebView classify(byte index) {
+        if(index == SEARCH_INDEX) return wvSearch;
+        if(index == VIEWER_INDEX) return wvViewer;
+        if(index == BOOK_INDEX) return wvBook;
+        if(index == NOVEL_INDEX) return wvNovel;
+        if(index == MAIN_INDEX) return wvMain;
+        throw new AssertionError();
     }
     private String getLatestClipboard() {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -411,6 +351,7 @@ public class MainActivity extends AppCompatActivity {
 
         return text.toString();
     }
+    // 볼륨 up down 키 제어
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
@@ -451,6 +392,73 @@ public class MainActivity extends AppCompatActivity {
                         + "})();";
         wv.evaluateJavascript(js, null);
     }
+    // restore =====================================================================================
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putByte(KEY_CURRENT, current);
+
+        // backoffstack 저장
+        int size = backoffstack.size();
+        byte[] arr = new byte[size];
+        int i = 0;
+        for (Byte b : backoffstack) {
+            arr[i++] = (byte) (b & 0xFF);
+        }
+        outState.putByteArray(KEY_STACK, arr);
+
+        // WebView 상태 저장
+        Bundle bMain = new Bundle();
+        Bundle bSearch = new Bundle();
+        Bundle bViewer = new Bundle();
+        Bundle bBook = new Bundle();
+        Bundle bNovel = new Bundle();
+
+        wvMain.saveState(bMain);
+        wvSearch.saveState(bSearch);
+        wvViewer.saveState(bViewer);
+        wvBook.saveState(bBook);
+        wvNovel.saveState(bNovel);
+
+        outState.putBundle(KEY_MAIN_STATE, bMain);
+        outState.putBundle(KEY_SEARCH_STATE, bSearch);
+        outState.putBundle(KEY_VIEWER_STATE, bViewer);
+        outState.putBundle(KEY_BOOK_STATE, bBook);
+        outState.putBundle(KEY_NOVEL_STATE, bNovel);
+    }
+    private boolean restoreAll(Bundle state) {
+        try {
+            // backoffstack 구성
+            byte[] arr = state.getByteArray(KEY_STACK);
+            backoffstack.clear();
+            if (arr != null) {
+                for (int i = arr.length - 1; i >= 0; i--) {
+                    backoffstack.push((byte) (arr[i] & 0xFF));
+                }
+            }
+
+            Bundle bMain = state.getBundle(KEY_MAIN_STATE);
+            Bundle bSearch = state.getBundle(KEY_SEARCH_STATE);
+            Bundle bViewer = state.getBundle(KEY_VIEWER_STATE);
+            Bundle bBook = state.getBundle(KEY_BOOK_STATE);
+            Bundle bNovel = state.getBundle(KEY_NOVEL_STATE);
+
+            if (bMain != null) wvMain.restoreState(bMain);
+            if (bSearch != null) wvSearch.restoreState(bSearch);
+            if (bViewer != null) wvViewer.restoreState(bViewer);
+            if (bBook != null) wvBook.restoreState(bBook);
+            if (bNovel != null) wvNovel.restoreState(bNovel);
+
+            // 현재 화면 띄우기
+            current = state.getByte(KEY_CURRENT, MAIN_INDEX);
+            swapView(current, true);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
     @Override
     protected void onPause() {
         super.onPause();
@@ -468,8 +476,5 @@ public class MainActivity extends AppCompatActivity {
         wvViewer.onResume();
         wvBook.onResume();
         wvNovel.onResume();
-    }
-    private String cutUrl(String url) {
-        return url.split("\\?")[0];
     }
 }
