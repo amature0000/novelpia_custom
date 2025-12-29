@@ -152,15 +152,14 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 // NOTE: 노벨피아는 로그인 요구를 파라미터로 넘기는데, 아래와 같은 로직을 사용하면
                 //       로그인 요구 창이 열래는 대신 단순히 메인 창으로 돌아감
-                // NOTE: 파라미터 분리 로직을 '?sid='로 지정하면 해결되지만, 로그인 요청을 날리게 되면
-                //       backoffstack이 꼬이기 때문에 아래와 같이 모든 파라미터를 제거하도록 구현함
+                // NOTE: 파라미터 분리 로직을 '?sid='로 명시하면 해결되지만 어차피 큰 차이는 없어서 냅둠
                 String url = cutUrl(request.getUrl().toString());
                 byte target = classify(url);
                 Log.d("stack", backoffstack.size() + "**" + toRead(current) + "->" + toRead(target));
                 if (target == current) {
                     // 동일 웹뷰 내에서 이동한 경우
-                    String current_url = cutUrl(view.getUrl());
-                    if (target != VIEWER_INDEX && current_url != null && !url.equals(current_url)) {
+                    String current_url = view.getUrl();
+                    if (target != VIEWER_INDEX && current_url != null && !url.equals(cutUrl(current_url))) {
                         backoffstack.push(current);
                     }
                     return false;
