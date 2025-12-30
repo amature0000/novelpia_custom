@@ -10,6 +10,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -66,6 +67,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_VIEWER_STATE = "key_wv_viewer";
     private static final String KEY_BOOK_STATE = "key_wv_book";
     private static final String KEY_NOVEL_STATE = "key_wv_novel";
+    private static final String PREF_NAME = "novelpia_pref";
+    private static final String KEY_LAST_READ_NOVEL_URL = "last_read_novel_url";
     // Toast 핸들러
     private final Handler toastHandler = new Handler(Looper.getMainLooper());
     // 메인코드 =====================================================================================
@@ -156,8 +159,10 @@ public class MainActivity extends AppCompatActivity {
                 String url = cutUrl(request.getUrl().toString());
                 byte target = classify(url);
                 Log.d("stack", backoffstack.size() + "**" + toRead(current) + "->" + toRead(target));
+                // 뷰어 웹뷰로 이동하는 경우
+                if (target == VIEWER_INDEX) setLastUrl(url);
+                // 동일 웹뷰 내에서 이동한 경우
                 if (target == current) {
-                    // 동일 웹뷰 내에서 이동한 경우
                     String current_url = view.getUrl();
                     if (target != VIEWER_INDEX && current_url != null && !url.equals(cutUrl(current_url))) {
                         backoffstack.push(current);
@@ -244,7 +249,6 @@ public class MainActivity extends AppCompatActivity {
     }
     // 핸들러 ======================================================================================
     private void handleUrl(String url) {
-        Log.d("stack", "req: " + url);
         // novel에서 넘어가는 경우 해당 웹뷰의 로딩 화면 제거
         if(current == NOVEL_INDEX) wvNovel.loadUrl(novelString);
 
@@ -289,6 +293,11 @@ public class MainActivity extends AppCompatActivity {
                     String url = getNovelpiaUrl(raw);
                     if(url != null) handleUrl(url);
                     else if (clipUrl != null) handleUrl(clipUrl);
+                })
+                .setNeutralButton("마지막 읽은 소설로 이동", (d, w) -> {
+                    String lastUrl = getLastUrl();
+                    if (lastUrl != null) handleUrl(lastUrl);
+                    else handleToast("마지막 읽은 소설이 없습니다.");
                 })
                 .show();
     }
@@ -386,6 +395,16 @@ public class MainActivity extends AppCompatActivity {
                         + "  window.dispatchEvent(new KeyboardEvent('keyup', opt));"
                         + "})();";
         wv.evaluateJavascript(js, null);
+    }
+    // 마지막 읽은 소설 url
+    private void setLastUrl(String url) {
+        Log.d("cache", url);
+        SharedPreferences sp = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        sp.edit().putString(KEY_LAST_READ_NOVEL_URL, url).apply();
+    }
+    private String getLastUrl() {
+        SharedPreferences sp = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        return sp.getString(KEY_LAST_READ_NOVEL_URL, null);
     }
     // restore =====================================================================================
     @Override
